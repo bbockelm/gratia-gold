@@ -1,0 +1,10 @@
+#!/usr/bin/python
+
+import sys
+
+from gratia_gold import main
+
+if __name__ == '__main__':
+    retval = main()
+    sys.exit(retval)
+
