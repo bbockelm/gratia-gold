@@ -8,7 +8,7 @@ Takes a summarized Gratia job and either charges or refunds it.
 import os
 
 def call_gcharge(job):
-
+    raise NotImplementedError()
     pid = os.fork()
     fd = open(logfile, "w")
     if pid == 0:
@@ -21,6 +21,7 @@ def call_gcharge(job):
     return status
 
 def refund(cp, job):
+    raise NotImplementedError()
     pid = os.fork()
     fd = open(logfile, "w")
     if pid == 0:

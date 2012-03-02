@@ -9,15 +9,19 @@ records it finds, and submit the summaries to GOLD via a command-line script.
 
 import os
 import logging
-import optparser
+import optparse
 import ConfigParser
+
+import gold
+import gratia
+import transaction
 
 log = None
 logfile = None
 
 def parse_opts():
 
-    parser = optparser.OptionParser()
+    parser = optparse.OptionParser()
     parser.add_option("-c", "--config", dest="config",
         help="Location of the configuration file.",
         default="/etc/gratia-gold.cfg")
@@ -48,12 +52,6 @@ def call_gcharge(job):
     while pid != pid2:
         pid2, status = os.wait()
     return status
-
-def start_txn(cp):
-    txn_file = cp.get("transaction", "last_successful_id")
-    txn_fp = open(txn_file, "r")
-    txn_obj = simplejson.load(txn_fp)
-    return txn_obj
 
 def stop_txn(cp, txn):
     txn_file = cp.get("transaction", "last_successful_id")
@@ -160,28 +158,43 @@ def main():
 
     config_logging(cp)
 
-    txn = start_txn(cp)    
+    job_count = 0
+    while job_count == 0:
 
-    roll_fd = check_rollback(cp)
+        txn = transaction.start_txn(cp)
+        print txn
 
-    jobs = query_gratia(cp, txn)
+        roll_fd = transaction.check_rollback(cp)
 
-    summary_jobs = summarize_gratia(jobs)
+        jobs = gratia.query_gratia(cp, txn)
 
-    processed_jobs = {}
-    for summary_job in summary_jobs:
+        for job in jobs:
+            print job
+
+        processed_jobs = {}
+        max_id = 0
+        for job in jobs:
         # Record the job into rollback log.  We write it in before we call
         # gcharge - this way, if the script is killed unexpectedly, we'll
         # refund the job.  So, this errs on the conservative side.
-        add_rollback(roll_fd, summary_job)
-        status = call_gcharge(summary_job)
-        if status != 0:
-            roll_fd.close()
-            check_rollback(cp)
-            log.error("Job charging failed.")
-            return 1
+            transaction.add_rollback(roll_fd, job)
+            status = gold.call_gcharge(job)
+            if status != 0:
+                roll_fd.close()
+                transaction.check_rollback(cp)
+                log.error("Job charging failed.")
+                return 1
+            job_count += 1
 
-    commit_txn(txn)
+            # Keep track of the max ID
+            if job['dbid'] > max_id:
+                max_id = job['dbid']+1
+
+        if job_count == 0:
+            max_id = txn['last_dbid'] + gratia.MAX_ID
+
+        txn['last_dbid'] = max_id
+        transaction.commit_txn(cp, txn)
 
     return 0
 
