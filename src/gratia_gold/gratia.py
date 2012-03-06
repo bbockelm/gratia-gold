@@ -29,7 +29,7 @@ SELECT
   NodeCount,
   count(Njobs) as Njobs,
   Processors,
-  EndTime,
+  DATE(EndTime),
   MachineName,
   ProjectName
 FROM
@@ -46,7 +46,7 @@ GROUP BY
   LocalUserId,
   NodeCount,
   Processors,
-  EndTime,
+  DATE(EndTime),
   MachineName,
   ProjectName
 ORDER BY JUR.dbid ASC

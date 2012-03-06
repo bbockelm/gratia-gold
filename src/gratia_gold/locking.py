@@ -24,7 +24,13 @@ def close_and_unlink_lock():
     global pid_with_lock
     if fd:
         if pid_with_lock == os.getpid():
-            os.unlink(fd.name)
+            try:
+                os.unlink(fd.name)
+            except OSError, oe:
+                # If we dropped privileges, we can't unlink!
+                if oe.errno != errno.EACCES:
+                    raise
+        os.ftruncate(fd.fileno(), 0)
         fd.close()
 atexit.register(close_and_unlink_lock)
 

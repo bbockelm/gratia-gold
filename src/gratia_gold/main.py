@@ -43,6 +43,7 @@ def parse_opts():
 
     return opts, args
 
+
 def config_logging(cp, opts):
     global log
     global logfile
@@ -66,28 +67,34 @@ def config_logging(cp, opts):
         logfile_handler.setLevel(logging.DEBUG)
 
     # formatter
-    formatter = logging.Formatter("%(asctime)s %(levelname)7s:  %(message)s")
+    formatter = logging.Formatter("[%(process)d] %(asctime)s %(levelname)7s:  %(message)s")
     console_handler.setFormatter(formatter)
+    logfile_handler.setFormatter(formatter)
     if opts.cron == 0:
         log.addHandler(console_handler)
     log.addHandler(logfile_handler)
     log.debug("Logger has been configured")
 
+
 def main():
 
     opts, args = parse_opts()
-
-    if opts.cron > 0:
-        random_sleep = random.randint(1, opts.cron)
-        time.sleep(random_sleep)
-
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
 
     config_logging(cp, opts)
 
+    if opts.cron > 0:
+        random_sleep = random.randint(1, opts.cron)
+        log.info("gratia-gold called from cron; sleeping for %d seconds." % \
+            random_sleep)
+        time.sleep(random_sleep)
+
     lockfile = cp.get("transaction", "lockfile")
     locking.exclusive_lock(lockfile)
+
+    gold.drop_privs(cp)
+    gold.setup_env(cp)
 
     job_count = 0
     while job_count == 0:
