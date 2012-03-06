@@ -54,4 +54,3 @@ exit 0
 * Tue Mar 06 2012 Brian Bockelman <bbockelm@cse.unl.edu> - 0.1-2
 - Initial packaging of the gratia-gold package.
 
-

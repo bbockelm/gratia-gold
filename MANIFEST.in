@@ -1,0 +1,5 @@
+include config/gratia-gold.cfg
+include config/gratia-gold.cron
+include config/gratia-gold.logrotate
+include config/gratia-gold.spec
+include src/gratia-gold
