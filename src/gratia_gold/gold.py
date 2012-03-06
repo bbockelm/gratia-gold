@@ -6,6 +6,9 @@ Takes a summarized Gratia job and either charges or refunds it.
 """
 
 import os
+import logging
+
+log = logging.getLogger("gratia_gold.gold")
 
 def call_gcharge(job):
     raise NotImplementedError()

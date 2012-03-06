@@ -7,10 +7,13 @@ Allows us to rollback Gratia->Gold uploads on failure.
 
 import os
 import md5
+import logging
 
 import simplejson
 
 import gold
+
+log = logging.getLogger("gratia_gold.transaction")
 
 def check_rollback(cp):
     """
@@ -32,7 +35,7 @@ def check_rollback(cp):
     if refund_fd:
         for line in refund_fd.readlines():
             refund_count += 1
-        print "There are %i refunds" % refund_count
+        log.info("There are %i refunds" % refund_count)
     else:
         refund_fd = open(refund_file, "w")
     # Check for a rollback file - if there is none, there's no transaction to

@@ -1,0 +1,7 @@
+/var/log/gratia-gold/*.log {
+    daily
+    rotate 10
+    missingok
+    notifempty
+}
+

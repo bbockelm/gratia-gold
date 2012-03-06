@@ -7,7 +7,11 @@ Queries the database,
 Summarizes resulting queries.
 """
 
+import logging
+
 import MySQLdb
+
+log = logging.getLogger("gratia_gold.gratia")
 
 MAX_ID = 100000
 

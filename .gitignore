@@ -1,3 +1,4 @@
-gratia_gold.dev.cfg
+*.dev.cfg
 test
 src/gratia_gold/*.pyc
+dist

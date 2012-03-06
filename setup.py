@@ -11,6 +11,7 @@ setup(name="gratia-gold",
 
       data_files=[("/etc/cron.d", ["config/gratia-gold.cron"]),
             ("/etc/gratia-gold", ["config/gratia-gold.cfg"]),
+            ("/etc/logrotate.d", ["config/gratia-gold.logrotate"]),
             ("/usr/bin", ["src/gratia-gold"]),
           ],
 
