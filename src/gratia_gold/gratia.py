@@ -69,25 +69,31 @@ def _add_if_exists(cp, attribute, info):
     except:
         pass
 
-def query_gratia(cp, txn):
+def query_gratia(cp, opts, txn):
     print "calling query_gratia ..."
     info = {}
-    _add_if_exists(cp, "user", info)
-    _add_if_exists(cp, "passwd", info)
+    #_add_if_exists(cp, "user", info)
+    print "opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) + " opts.probename=" + opts.probename
+    info['user'] = opts.user
+    #_add_if_exists(cp, "passwd", info)
+    info['passwd'] = opts.passwd
     _add_if_exists(cp, "db", info)
-    _add_if_exists(cp, "host", info)
-    _add_if_exists(cp, "port", info)
+    #_add_if_exists(cp, "host", info)
+    info['host'] = opts.host
+    #_add_if_exists(cp, "port", info)
+    info['port'] = opts.port
     if 'port' in info:
         info['port'] = int(info['port'])
     try:
         conn = MySQLdb.connect(**info)
-        # print "successfully connected ..."
+        print "successfully connected ..."
     except Exception:
-        # print "exception"
+        print "exception"
         return 0
     curs = conn.cursor()
 
-    probe = cp.get("gratia", "probe")
+    # probe = cp.get("gratia", "probe")
+    probe = opts.probename
     txn['probename'] = probe
 
     results = []

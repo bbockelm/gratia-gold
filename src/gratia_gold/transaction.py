@@ -90,13 +90,17 @@ def add_rollback(fd, job):
 
 # initialize the last_successful_id to be 
 # the result of select MIN(dbid) from JobUsageRecord
-def initialize_txn(cp):
+def initialize_txn(cp, opts):
     info = {}
-    _add_if_exists(cp, "user", info)
-    _add_if_exists(cp, "passwd", info)
+    # _add_if_exists(cp, "user", info)
+    info['user'] = opts.user
+    # _add_if_exists(cp, "passwd", info)
+    info['passwd'] = opts.passwd
     _add_if_exists(cp, "db", info)
-    _add_if_exists(cp, "host", info)
-    _add_if_exists(cp, "port", info)
+    #_add_if_exists(cp, "host", info)
+    info['host'] = opts.host
+    # _add_if_exists(cp, "port", info)
+    info['port'] = opts.port
     if 'port' in info:
         info['port'] = int(info['port'])
     try:
@@ -118,7 +122,8 @@ def initialize_txn(cp):
     # now, we want to put it into the file
     txn={}
     txn['last_successful_id']=minimum_dbid
-    txn['probename'] = cp.get("gratia", "probe")
+    # txn['probename'] = cp.get("gratia", "probe")
+    txn['probename'] = opts.probename
     print "last_successful_id"
     print txn['last_successful_id']
     commit_txn(cp, txn)
@@ -126,7 +131,7 @@ def initialize_txn(cp):
     print txn['last_successful_id']
     return minimum_dbid, maximum_dbid
 
-def start_txn(cp):
+def start_txn(cp, opts):
     txn_file = cp.get("transaction", "last_successful_id")
     try:
         txn_fp = open(txn_file, "r")
@@ -136,7 +141,8 @@ def start_txn(cp):
     except IOError, ie:
         if ie.errno != 2:
             raise
-        probename = cp.get("gratia", "probe")
+        # probename = cp.get("gratia", "probe")
+        probename = opts.probename
         return {'probename':probename, 'last_successful_id': 0}
 
 def commit_txn(cp, txn):

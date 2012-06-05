@@ -24,16 +24,27 @@ logfile = None
 
 def parse_opts():
 
-    parser = optparse.OptionParser()
+    parser = optparse.OptionParser(conflict_handler="resolve")
     parser.add_option("-c", "--config", dest="config",
-        help="Location of the configuration file.",
-        default="config/gratia-gold.cfg")
+                      help="Location of the configuration file.",
+                      default="config/gratia-gold.cfg")
     parser.add_option("-v", "--verbose", dest="verbose",
-        default=False, action="store_true",
-        help="Increase verbosity.")
+                      default=False, action="store_true",
+                      help="Increase verbosity.")
     parser.add_option("-s", "--cron", dest="cron",
-        type="int", default=0,
-        help = "Called from cron; cron interval (adds a random sleep)")
+                      type="int", default=0,
+                      help = "Called from cron; cron interval (adds a random sleep)")
+    parser.add_option("-h", "--host", dest="host",
+                      default=None, help="the host name of the database gratia")
+    parser.add_option("-u", "--user", dest="user",
+                      default=None, help="the user name")
+    parser.add_option("-p", "--passwd", dest="passwd",
+                      default=None, help="the password of the user")
+    parser.add_option("-P", "--port", dest="port",
+                      type="int", default=None, help="the port number of the database gratia")
+    parser.add_option("-n", "--probename", dest="probename",
+                      default=None, help="the probename of the query in the database gratia")
+    
 
     opts, args = parser.parse_args()
 
@@ -84,6 +95,13 @@ def main():
     opts, args = parse_opts()
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
+    print "opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) +  " opts.probe" + opts.probename    
+    # cp['username'] = opts.user
+    # cp['passwd'] = opts.passwd
+    # cp['port'] = opts.port
+    # cp['host'] = opts.host
+    # cp['probename'] = opts.probename
+    
     # print "finished reading configurations ..."
 
     config_logging(cp, opts)
@@ -100,14 +118,13 @@ def main():
     gold.drop_privs(cp)
     gold.setup_env(cp)
     
-    
-    # print "before while loop"
-
-    #while job_count == 0:
-    # added by Yaling Zheng
-    (min_dbid, max_dbid) = transaction.initialize_txn(cp)
-    
-    curr_txn = transaction.start_txn(cp)
+    print "before transaction.initialize_txt"
+    # read min_dbid and max_dbid from the gratia database and
+    # also save them into the file last_successful_id
+    (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts)
+    print "min_dbid is "+ str(min_dbid)
+    print "max_dbid is "+ str(max_dbid)
+    curr_txn = transaction.start_txn(cp, opts)
     curr_txt_id = curr_txn['last_successful_id'] 
     
     curr_dbid = min_dbid
@@ -133,7 +150,7 @@ def main():
         roll_fd = transaction.check_rollback(cp, logfile)
 
         #print "preparing to query gratia ... "
-        jobs = gratia.query_gratia(cp, txn)
+        jobs = gratia.query_gratia(cp, opts, txn)
         #print "finshed querying gratia ... "
 
         for job in jobs:
