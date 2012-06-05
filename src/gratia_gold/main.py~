@@ -84,7 +84,7 @@ def main():
     opts, args = parse_opts()
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
-    # print "finished reading configurations ..."
+    print "finished reading configurations ..."
 
     config_logging(cp, opts)
 
@@ -100,35 +100,24 @@ def main():
     gold.drop_privs(cp)
     gold.setup_env(cp)
     
+    job_count = 0
     
-    # print "before while loop"
+    print "before while loop"
 
     #while job_count == 0:
     # added by Yaling Zheng
     (min_dbid, max_dbid) = transaction.initialize_txn(cp)
-    
-    curr_txn = transaction.start_txn(cp)
-    curr_txt_id = curr_txn['last_successful_id'] 
-    
+
     curr_dbid = min_dbid
+    while curr_dbid <= max_dbid:
 
-    if (curr_txt_id < min_dbid):
-        curr_txt['last_successful_id'] = min_dbid
-    else:
-        curr_dbid = curr_txt_id
-
-    print "curr dbid is : " + str(curr_dbid)
-    txn = curr_txn
-    txn['last_successful_id'] = curr_dbid
-    while curr_dbid <=  max_dbid:
-
-        print "curr_dbid = " + str(curr_dbid)
-        #txn['last_dbid'] = curr_dbid
+        curr_dbid += 100000
 
         #print "in while loop ... \n"
+        txn = transaction.start_txn(cp)
         #print "txn[last_dbid]="
         #print txn['last_dbid']
-        log.debug("Current transaction: probe=%(probename)s, DBID=%(last_successful_id)s" % txn)
+        #log.debug("Current transaction: probe=%(probename)s, DBID=%(last_dbid)s" % txn)
 
         roll_fd = transaction.check_rollback(cp, logfile)
 
@@ -137,17 +126,16 @@ def main():
         #print "finshed querying gratia ... "
 
         for job in jobs:
-            # print "Browsing job " + str(job)
+            print "Browsing job " + str(job)
             log.debug("Processing job: %s" % str(job))
 
         processed_jobs = {}
         max_id = 0
-        job_count = 0
         for job in jobs:
-            # print "Processing job " + str(job)
-            # Record the job into rollback log.  We write it in before we call
-            # gcharge - this way, if the script is killed unexpectedly, we'll
-            # refund the job.  So, this errs on the conservative side.
+            print "Processing job " + str(job)
+        # Record the job into rollback log.  We write it in before we call
+        # gcharge - this way, if the script is killed unexpectedly, we'll
+        # refund the job.  So, this errs on the conservative side.
             transaction.add_rollback(roll_fd, job)
             status = gold.call_gcharge(job, logfile)
             if status != 0:
@@ -163,12 +151,12 @@ def main():
                 max_id = job['dbid']+1
 
         if job_count == 0:
-            max_id = txn['last_successful_id'] + gratia.MAX_ID
+            max_id = txn['last_dbid'] + gratia.MAX_ID
 
-        txn['last_successful_id'] = max_id
+        txn['last_dbid'] = max_id
         # Yaling added this
         # txn['probename'] = probename
         transaction.commit_txn(cp, txn)
-        curr_dbid = max_id
+
     return 0
 

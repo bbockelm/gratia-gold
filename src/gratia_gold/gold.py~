@@ -9,7 +9,6 @@ import os
 import pwd
 import errno
 import logging
-from datetime import datetime, timedelta
 
 log = logging.getLogger("gratia_gold.gold")
 
@@ -35,24 +34,6 @@ def drop_privs(cp):
         if oe.errno != errno.EPERM:
             raise
         log.warn("Unable to drop privileges to %s - continuing" % gold_user)
-
-
-def get_digits_from_a_string(string1):
-    if string1 is None:
-        return 1
-    if (type(string1) is int) or (type(string1) is long):
-        return string1
-    print string1
-    digitsofstring1 = ""
-    for i in range(len(string1)):
-        if string1[i]>='0' and string1[i]<='9':
-            digitsofstring1 += digitsofstring1[i]
-    if digitsofstring1 == "":
-        numberofstring1 = 1
-    else:
-        numberofstring1 = int(digitsofstring1)
-    return numberofstring1
-
 
 '''
 Modified by Yaling Zheng
@@ -81,54 +62,42 @@ def call_gcharge(job, logfile):
     args += ["-u", "yzheng"]
     #if job['project_name']:
     #    args += ["-p", job['project_name']]
-    # force the project name to be OSG-Staff
     job['project_name'] = "OSG-Staff"
     args += ["-p", "OSG-Staff"]
     #args += ["-m", job["machine_name"]]
-    # force the machine name to be grid1.osg.xsede
     job['machine_name'] = "grid1.osg.xsede"
     args += ["-m", "grid1.osg.xsede"] # force the machine name to be grid1.osg.xsede
-    
-    originalnumprocessors = job['processors']
-    job['processors'] = get_digits_from_a_string(originalnumprocessors)
-    #args += ["-P", job['processors']]
-    
-    originalnodecount = job['node_count']
-    job['node_count'] = get_digits_from_a_string(originalnodecount)
-    #args += ["-N", job['node_count']]]
+    job['processors'] = 1
+    if job['processors']:
+        job['processors'] = 1 # force the number of processors to be 1
+        args += ["-P", job['processors']]
+    job['node_count'] = 1 # force the number of nodes to be 1
+    args += ["-N", job['node_count']]
     # ignore the job endtime, the default end time is now
     # force the end time to be the day after tomorrow
-    if job['endtime'] is None:
-        today = datetime.today()
-        dt = datetime(today.year, today.month, today.day, today.hour, today.minute, today.second)
-        job['endtime'] = str(dt+timedelta(1,0)) # now + 24 hours
-    # args += ["-e", job['endtime']]
+    job['endtime'] = "2012-05-31 00:00:00"
+    args += ["-e", job['endtime']]
     if job['dbid']:
         args += ["-J", job['dbid']]
     
     # [-t charge_duration]
-    # 'charge' is a must option
-    if job['charge'] is None:
+    # I think 'charge' is a must option
+    print "job[charge] = "
+    print job['charge']
+    if (job['charge'] == "None"):
         job['charge'] = 3600 # default 3600 seconds, which is 1 hour
+    job['charge'] = 3600 # force the duration time to be 1 hour
 
-    mystring = "gcharge -u " + str(job['user']) \
-        + " -p "+str(job['project_name']) \
-        + " -m " + str(job['machine_name']) \
-        + " -N " + str(job['node_count']) \
-        + " -P "+str(job['processors']) \
-        + " -e \"" + str(job['endtime'])+"\"" \
-        + " -J " + str(job['dbid']) \
-        + " -t " + str(job['charge'])
+    mystring = "gcharge -u " + str(job['user']) + " -p "+str(job['project_name'])+ " -m " + str(job['machine_name']) \
+                + " -N " + str(job['node_count']) + " -P "+str(job['processors']) + " -e \"" + str(job['endtime'])+"\"" \
+                + " -J " + str(job['dbid']) + " -t " + str(job['charge'])
     print mystring
-    try:
-        gchargeexitstatus = os.system(mystring)
-    except:
-        print "gcharge failed ... "
-    print "gcharge return status is " + str(gchargeexitstatus)
-    return gchargeexitstatus
-    #args += ["-t", job['charge']]
-    #print "gcharge args"
-    #print args
+    print "gcharge return status is \n"
+    gchargeexitstatus = os.system(mystring)
+    print str(gchargeexitstatus)
+    args += ["-t", job['charge']]
+    print "gcharge args"
+    print args
     # no queue name?
     # quality_of_service ?
     # nodes?
@@ -178,16 +147,13 @@ def call_gcharge(job, logfile):
     # return status
 
 def refund(cp, job, logfile):
-    # print "grefund"
+    print "grefund"
     # args = []
     # # [-j] gold_job_id, we assume dbid is unique, and regard it as gold_job_id
     # # I think dbid is a must option
-    #args += ["-j", job["dbid"]]
+    args += ["-j", job["dbid"]]
     strrefund = "grefund -J "+str(job['dbid'])
-    try:
-        os.system(strrefund)
-    except:
-        print "job refund failed ... \n"
+    os.system(strrefund)
     # print "grefund args"
     # print args
     # fd = open(logfile, "w")
@@ -200,6 +166,7 @@ def refund(cp, job, logfile):
     #         return -1
     # else:
     #     return -1
+
 
     # pid = os.fork()
     # fd = open(logfile, "w")

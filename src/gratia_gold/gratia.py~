@@ -37,8 +37,8 @@ FROM
 JOIN
   JobUsageRecord_Meta JURM ON JUR.dbid = JURM.dbid
 WHERE
-  JUR.dbid >= %%(last_successful_id)s AND
-  JUR.dbid < %%(last_successful_id)s + %d AND   
+  JUR.dbid >= %%(last_dbid)s AND
+  JUR.dbid < %%(last_dbid)s + %d AND   
   ProbeName REGEXP %%(probename)s
 GROUP BY
   ResourceType,
@@ -81,9 +81,11 @@ def query_gratia(cp, txn):
         info['port'] = int(info['port'])
     try:
         conn = MySQLdb.connect(**info)
-        # print "successfully connected ..."
+        print "in module gratia"
+        print "successfully connected ..."
     except Exception:
-        # print "exception"
+        print "in module gratia"
+        print "exception"
         return 0
     curs = conn.cursor()
 
@@ -91,10 +93,12 @@ def query_gratia(cp, txn):
     txn['probename'] = probe
 
     results = []
-    # print GRATIA_QUERY
+    # why txn has to be a dictionary?
+    print GRATIA_QUERY
+    print txn
     curs.execute(GRATIA_QUERY, txn)
     for row in curs.fetchall():
-        # print "fetching one line"
+        print "fetching one line"
         info = {}
         info['dbid'] = row[0]
         info['resource_type'] = row[1]

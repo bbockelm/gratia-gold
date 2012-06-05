@@ -38,7 +38,7 @@ def check_rollback(cp, logfile):
     if refund_fd:
         for line in refund_fd.readlines():
             refund_count += 1
-        #print "There are "+str(refund_count)+" refunds"
+        print "There are "+str(refund_count)+" refunds"
         log.info("There are %i refunds" % refund_count)
     else:
         refund_fd = open(refund_file, "w")
@@ -51,8 +51,8 @@ def check_rollback(cp, logfile):
             return open(rollback_file, "w")
         raise
     skip_count = 0
-    # print "printing refund_fd ..."
-    # print "refund_fd="+str(refund_fd)
+    print "printing refund_fd ..."
+    print "refund_fd="+str(refund_fd)
     # We have a rollback file.  If there's refunds already issued, skip those.
     for line in rollback_fd.readlines():
         print line
@@ -88,7 +88,7 @@ def add_rollback(fd, job):
     fd.write("%s:%s\n" % (digest, job_str))
     os.fsync(fd.fileno())
 
-# initialize the last_successful_id to be 
+# initialize the last_dbid to be 
 # the result of select MIN(dbid) from JobUsageRecord
 def initialize_txn(cp):
     info = {}
@@ -117,27 +117,26 @@ def initialize_txn(cp):
     print str(maximum_dbid)
     # now, we want to put it into the file
     txn={}
-    txn['last_successful_id']=minimum_dbid
-    txn['probename'] = cp.get("gratia", "probe")
-    print "last_successful_id"
-    print txn['last_successful_id']
+    txn['last_dbid']=minimum_dbid
+    txn['probename']=None
+    _add_if_exists(cp, "probename", txn['probename']);
+    print "last_dbid"
+    print txn['last_dbid']
     commit_txn(cp, txn)
-    print "last_successful_id"
-    print txn['last_successful_id']
+    print "last_dbid"
+    print txn['last_dbid']
     return minimum_dbid, maximum_dbid
 
 def start_txn(cp):
     txn_file = cp.get("transaction", "last_successful_id")
     try:
         txn_fp = open(txn_file, "r")
-        txn_obj = simplejson.load(txn_fp)
-        txn_fp.close()
-        return txn_obj
     except IOError, ie:
         if ie.errno != 2:
             raise
-        probename = cp.get("gratia", "probe")
-        return {'probename':probename, 'last_successful_id': 0}
+        return {'last_dbid': 0}
+    txn_obj = simplejson.load(txn_fp)
+    return txn_obj
 
 def commit_txn(cp, txn):
     txn_file = cp.get("transaction", "last_successful_id")

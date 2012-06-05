@@ -1,0 +1,24 @@
+
+[gratia]
+# Gratia database connection information
+user=reader_user
+db=gratia
+passwd=reader_password
+port=3320
+host=gratia.example.com
+
+# A regular expression matching the probe you want to upload
+probe=condor:osg.example.com
+
+[gold]
+home=/opt/gold/default
+username=gold
+
+[transaction]
+rollback = /var/lib/gratia-gold/rollback
+last_successful_id = /var/lib/gratia-gold/txn_id
+lockfile = /var/lock/gratia-gold.lock
+
+[logging]
+file=/var/log/gratia-gold/gratia-gold.log
+
