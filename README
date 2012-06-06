@@ -1,5 +1,5 @@
 run the following command
-python src/gratia-gold -u "osg-xsede-reader" -p "Iyo5ieF\"aedo" -P 49152 -h "rcf-gratia.unl.edu" -n "condor:glidein.unl.edu"
+python src/gratia-gold -u "xxxx" -p "xxxx" -P xxxx -h "xxxx" -n "xxxxx"
 
 This script is meant to synchronize and summarize job records from the OSG
 Gratia system into GOLD.
