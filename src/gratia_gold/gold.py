@@ -114,20 +114,20 @@ def call_gcharge(job, log):
     args += ["-t", job['charge']]
     log.debug("gcharge " + str(args))
     pid = os.fork()
-    gchargestatus = 0
+    status = 0
     if pid==0:
         try:
             os.execvp("gcharge", args)
         except:
-            log.debug("job charge failed ... \n")
             log.error("job charge failed ... \n")
-            gchargestatus = -1
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
-    if gchargestatus == 0:
+    if status == 0:
         log.debug("job charge succeed ... \n")
-    return gchargestatus
+    else:
+        log.debug("job charge failed ... \n")
+    return status
 
 
 def refund(cp, job, log):
@@ -135,18 +135,19 @@ def refund(cp, job, log):
     args += ["-J", job["dbid"]]
     log.debug("grefund "+ str(args))
     pid = os.fork()
-    grefundstatus = 0
+    status = 0
     if pid == 0:
         try:
             os.execvp("grefund", args)
         except:
-            log.debug("job refund failed ... \n")
             log.error("job refund failed ...\n")
-            grefundstatus = -1
+            status = -1
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
-    if grefundstatus == 0:
+    if status == 0:
         log.debug("job refund succeed ... \n")
-    return grefundstatus
+    else:
+        log.debug("job refund failed ...\n")
+    return status
 
