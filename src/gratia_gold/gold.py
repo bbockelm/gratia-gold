@@ -11,7 +11,7 @@ import errno
 import logging
 from datetime import datetime, timedelta
 
-log = logging.getLogger("gratia_gold.gold")
+#log = logging.getLogger("gratia_gold.gold")
 
 def setup_env(cp):
     gold_home = cp.get("gold", "home")
@@ -61,7 +61,7 @@ def get_digits_from_a_string(string1):
     return numberofstring1
 
 
-def call_gcharge(job, logfile):
+def call_gcharge(job, log):
     '''
     Modified by Yaling Zheng
     job has the following information 
@@ -79,16 +79,14 @@ def call_gcharge(job, logfile):
     [--debug] [-?, --help] [--man] [--quiet] [-v, --verbose] [-V, --version]
     [[-j] gold_job_id] [-q quote_id] [-r reservation_id] {-J job_id}
     '''
-    global log
     args = ["gcharge"]
     # force the user name to be yzheng
-    job['user'] = "yzheng"
-    args += ["-u", job['user']]
-    #if job['project_name']:
-    #    args += ["-p", job['project_name']]
+    if job['user']:
+        args += ["-u", job['user']]
+    if job['project_name']:
+        args += ["-p", job['project_name']]
     # force the project name to be OSG-Staff
-    job['project_name'] = "OSG-Staff"
-    args += ["-p", job['project_name']]
+    # job['project_name'] = "OSG-Staff"
     # force the machine name to be grid1.osg.xsede
     job['machine_name'] = "grid1.osg.xsede"
     args += ["-m", job['machine_name']]
@@ -114,36 +112,41 @@ def call_gcharge(job, logfile):
     if job['charge'] is None:
         job['charge'] = "3600" # default 3600 seconds, which is 1 hour
     args += ["-t", job['charge']]
-    log.info("gcharge " + str(args))
+    log.debug("gcharge " + str(args))
     pid = os.fork()
-    status = 0
+    gchargestatus = 0
     if pid==0:
         try:
             os.execvp("gcharge", args)
-            log.debug("job charge succeed ... \n")
         except:
+            log.debug("job charge failed ... \n")
             log.error("job charge failed ... \n")
+            gchargestatus = -1
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
-    return status
+    if gchargestatus == 0:
+        log.debug("job charge succeed ... \n")
+    return gchargestatus
 
 
-def refund(cp, job, logfile):
-    global log
+def refund(cp, job, log):
     args = ["grefund"]
     args += ["-J", job["dbid"]]
-    log.info("grefund "+ str(args))
+    log.debug("grefund "+ str(args))
     pid = os.fork()
-    status = 0
+    grefundstatus = 0
     if pid == 0:
         try:
             os.execvp("grefund", args)
-            log.debug("job refund succeed ... \n")
         except:
+            log.debug("job refund failed ... \n")
             log.error("job refund failed ...\n")
+            grefundstatus = -1
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
-    return status
+    if grefundstatus == 0:
+        log.debug("job refund succeed ... \n")
+    return grefundstatus
 

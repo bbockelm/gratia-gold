@@ -11,7 +11,7 @@ import logging
 
 import MySQLdb
 
-log = logging.getLogger("gratia_gold.gratia")
+#log = logging.getLogger("gratia_gold.gratia")
 
 MAX_ID = 100000
 
@@ -69,11 +69,11 @@ def _add_if_exists(cp, attribute, info):
     except:
         pass
 
-def query_gratia(cp, opts, txn):
-    print "calling query_gratia ..."
+def query_gratia(cp, opts, log, txn):
+    #print "calling query_gratia ..."
     info = {}
     #_add_if_exists(cp, "user", info)
-    print "opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) + " opts.probename=" + opts.probename
+    log.debug("opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) + " opts.probename=" + opts.probename)
     info['user'] = opts.user
     #_add_if_exists(cp, "passwd", info)
     info['passwd'] = opts.passwd
@@ -86,7 +86,7 @@ def query_gratia(cp, opts, txn):
         info['port'] = int(info['port'])
     try:
         conn = MySQLdb.connect(**info)
-        print "successfully connected ..."
+        log.debug("successfully connected ...")
     except Exception:
         print "exception"
         return 0

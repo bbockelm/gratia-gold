@@ -113,10 +113,9 @@ def main():
     gold.drop_privs(cp)
     gold.setup_env(cp)
     
-    print "before transaction.initialize_txt"
     # read min_dbid and max_dbid from the gratia database and
     # also save them into the file last_successful_id
-    (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts)
+    (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts, log)
     log.debug("min_dbid is "+ str(min_dbid))
     log.debug("max_dbid is "+ str(max_dbid))
     curr_txn = transaction.start_txn(cp, opts)
@@ -139,7 +138,7 @@ def main():
 
         roll_fd = transaction.check_rollback(cp, logfile)
 
-        jobs = gratia.query_gratia(cp, opts, txn)
+        jobs = gratia.query_gratia(cp, opts, log, txn)
 
         for job in jobs:
             log.debug("Processing job: %s" % str(job))
@@ -152,10 +151,10 @@ def main():
             # gcharge - this way, if the script is killed unexpectedly, we'll
             # refund the job.  So, this errs on the conservative side.
             transaction.add_rollback(roll_fd, job)
-            status = gold.call_gcharge(job, logfile)
+            status = gold.call_gcharge(job, log)
             if status != 0:
                 #roll_fd.close()
-                transaction.check_rollback(cp, logfile)
+                transaction.check_rollback(cp, log)
                 log.error("Job charging failed.")
                 # return 1
                 continue
@@ -169,7 +168,7 @@ def main():
             max_id = txn['last_successful_id'] + gratia.MAX_ID
 
         txn['last_successful_id'] = max_id
-        transaction.commit_txn(cp, txn)
+        transaction.commit_txn(cp, txn, log)
         curr_dbid = max_id
     return 0
 

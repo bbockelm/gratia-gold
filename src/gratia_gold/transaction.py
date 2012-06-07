@@ -18,7 +18,7 @@ from gratia import _add_if_exists
 
 log = logging.getLogger("gratia_gold.transaction")
 
-def check_rollback(cp, logfile):
+def check_rollback(cp, log):
     """
     Read the rollback log, and rollback any pending charges.
     """
@@ -68,9 +68,9 @@ def check_rollback(cp, logfile):
         job_dict = simplejson.loads(job)
         # Perform refund, then write it out.  We err on the side of issuing
         # too many refunds.
-        print "performing refund ..."
-        gold.refund(cp, job_dict, logfile)
-        print line
+        #print "performing refund ..."
+        gold.refund(cp, job_dict, log)
+        #print line
         refund_fd.write(line)
         os.fsync(refund_fd.fileno())
     rollback_fd.close()
@@ -90,7 +90,7 @@ def add_rollback(fd, job):
 
 # initialize the last_successful_id to be 
 # the result of select MIN(dbid) from JobUsageRecord
-def initialize_txn(cp, opts):
+def initialize_txn(cp, opts, log):
     info = {}
     # _add_if_exists(cp, "user", info)
     info['user'] = opts.user
@@ -106,29 +106,24 @@ def initialize_txn(cp, opts):
     try:
         db = MySQLdb.connect(**info)
     except Exception:
-        print "exception"
+        log.debug("Connection to database failed ... \n")
+        # print "exception"
         return 0, 0
     cursor = db.cursor()
     cursor.execute("select MIN(dbid) from JobUsageRecord");
     row = cursor.fetchone()
     minimum_dbid = int(row[0])
-    print "minimum_dbid"
-    print str(minimum_dbid)
+    log.debug("minimum_dbid: " + str(minimum_dbid))
     cursor.execute("select MAX(dbid) from JobUsageRecord");
     row = cursor.fetchone()
     maximum_dbid = int(row[0])
-    print "maximum_dbid"
-    print str(maximum_dbid)
+    log.debug("maximum_dbid: " + str(maximum_dbid))
     # now, we want to put it into the file
     txn={}
     txn['last_successful_id']=minimum_dbid
     # txn['probename'] = cp.get("gratia", "probe")
     txn['probename'] = opts.probename
-    print "last_successful_id"
-    print txn['last_successful_id']
-    commit_txn(cp, txn)
-    print "last_successful_id"
-    print txn['last_successful_id']
+    commit_txn(cp, txn, log)
     return minimum_dbid, maximum_dbid
 
 def start_txn(cp, opts):
@@ -145,11 +140,11 @@ def start_txn(cp, opts):
         probename = opts.probename
         return {'probename':probename, 'last_successful_id': 0}
 
-def commit_txn(cp, txn):
+def commit_txn(cp, txn, log):
     txn_file = cp.get("transaction", "last_successful_id")
     txn_fp = open(txn_file, "w")
     simplejson.dump(txn, txn_fp)
-    print txn
+    log.debug("updating ... " + str(txn))
     os.fsync(txn_fp.fileno())
     txn_fp.close()
 
