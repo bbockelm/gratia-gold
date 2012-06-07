@@ -92,19 +92,14 @@ def config_logging(cp, opts):
 
 
 def main():
+    global log
+    global logfile
     opts, args = parse_opts()
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
-    print "opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) +  " opts.probe" + opts.probename    
-    # cp['username'] = opts.user
-    # cp['passwd'] = opts.passwd
-    # cp['port'] = opts.port
-    # cp['host'] = opts.host
-    # cp['probename'] = opts.probename
-    
-    # print "finished reading configurations ..."
-
     config_logging(cp, opts)
+
+    log.info("opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) +  " opts.probe" + opts.probename)    
 
     if opts.cron > 0:
         random_sleep = random.randint(1, opts.cron)
@@ -122,8 +117,8 @@ def main():
     # read min_dbid and max_dbid from the gratia database and
     # also save them into the file last_successful_id
     (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts)
-    print "min_dbid is "+ str(min_dbid)
-    print "max_dbid is "+ str(max_dbid)
+    log.debug("min_dbid is "+ str(min_dbid))
+    log.debug("max_dbid is "+ str(max_dbid))
     curr_txn = transaction.start_txn(cp, opts)
     curr_txt_id = curr_txn['last_successful_id'] 
     
@@ -134,34 +129,25 @@ def main():
     else:
         curr_dbid = curr_txt_id
 
-    print "curr dbid is : " + str(curr_dbid)
+    log.debug("curr dbid is : " + str(curr_dbid))
     txn = curr_txn
     txn['last_successful_id'] = curr_dbid
     while curr_dbid <=  max_dbid:
 
-        print "curr_dbid = " + str(curr_dbid)
-        #txn['last_dbid'] = curr_dbid
-
-        #print "in while loop ... \n"
-        #print "txn[last_dbid]="
-        #print txn['last_dbid']
+        log.debug("curr_dbid = " + str(curr_dbid))
         log.debug("Current transaction: probe=%(probename)s, DBID=%(last_successful_id)s" % txn)
 
         roll_fd = transaction.check_rollback(cp, logfile)
 
-        #print "preparing to query gratia ... "
         jobs = gratia.query_gratia(cp, opts, txn)
-        #print "finshed querying gratia ... "
 
         for job in jobs:
-            # print "Browsing job " + str(job)
             log.debug("Processing job: %s" % str(job))
 
         processed_jobs = {}
         max_id = 0
         job_count = 0
         for job in jobs:
-            # print "Processing job " + str(job)
             # Record the job into rollback log.  We write it in before we call
             # gcharge - this way, if the script is killed unexpectedly, we'll
             # refund the job.  So, this errs on the conservative side.
@@ -183,8 +169,6 @@ def main():
             max_id = txn['last_successful_id'] + gratia.MAX_ID
 
         txn['last_successful_id'] = max_id
-        # Yaling added this
-        # txn['probename'] = probename
         transaction.commit_txn(cp, txn)
         curr_dbid = max_id
     return 0
