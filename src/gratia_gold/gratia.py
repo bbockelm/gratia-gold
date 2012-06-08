@@ -70,7 +70,6 @@ def _add_if_exists(cp, attribute, info):
         pass
 
 def query_gratia(cp, opts, log, txn):
-    #print "calling query_gratia ..."
     info = {}
     #_add_if_exists(cp, "user", info)
     log.debug("opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) + " opts.probename=" + opts.probename)
@@ -86,9 +85,9 @@ def query_gratia(cp, opts, log, txn):
         info['port'] = int(info['port'])
     try:
         conn = MySQLdb.connect(**info)
-        log.debug("successfully connected ...")
+        log.debug("successfully connected to database ...\n")
     except Exception:
-        print "exception"
+        log.debug("failed to connect to database ... \n")
         return 0
     curs = conn.cursor()
 
@@ -100,7 +99,6 @@ def query_gratia(cp, opts, log, txn):
     # print GRATIA_QUERY
     curs.execute(GRATIA_QUERY, txn)
     for row in curs.fetchall():
-        # print "fetching one line"
         info = {}
         info['dbid'] = row[0]
         info['resource_type'] = row[1]

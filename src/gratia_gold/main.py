@@ -45,7 +45,6 @@ def parse_opts():
     parser.add_option("-n", "--probename", dest="probename",
                       default=None, help="the probename of the query in the database gratia")
     
-
     opts, args = parser.parse_args()
 
     if not os.path.exists(opts.config):
@@ -99,7 +98,9 @@ def main():
     cp.read(opts.config)
     config_logging(cp, opts)
 
-    log.info("opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) +  " opts.probe" + opts.probename)    
+    log.info("opts.user=" + opts.user + " opts.passwd=" + opts.passwd  \
+                 + " opts.host="+opts.host + " opts.port=" + str(opts.port) \
+                 +  " opts.probe" + opts.probename)    
 
     if opts.cron > 0:
         random_sleep = random.randint(1, opts.cron)
@@ -114,7 +115,7 @@ def main():
     gold.setup_env(cp)
     
     # read min_dbid and max_dbid from the gratia database and
-    # also save them into the file last_successful_id
+    # also save max(min_dbid, last_successful_id) into the file last_successful_id 
     (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts, log)
     log.debug("min_dbid is "+ str(min_dbid))
     log.debug("max_dbid is "+ str(max_dbid))

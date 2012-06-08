@@ -38,7 +38,6 @@ def check_rollback(cp, log):
     if refund_fd:
         for line in refund_fd.readlines():
             refund_count += 1
-        #print "There are "+str(refund_count)+" refunds"
         log.info("There are %i refunds" % refund_count)
     else:
         refund_fd = open(refund_file, "w")
@@ -51,8 +50,6 @@ def check_rollback(cp, log):
             return open(rollback_file, "w")
         raise
     skip_count = 0
-    # print "printing refund_fd ..."
-    # print "refund_fd="+str(refund_fd)
     # We have a rollback file.  If there's refunds already issued, skip those.
     for line in rollback_fd.readlines():
         print line
@@ -68,9 +65,7 @@ def check_rollback(cp, log):
         job_dict = simplejson.loads(job)
         # Perform refund, then write it out.  We err on the side of issuing
         # too many refunds.
-        #print "performing refund ..."
         gold.refund(cp, job_dict, log)
-        #print line
         refund_fd.write(line)
         os.fsync(refund_fd.fileno())
     rollback_fd.close()
@@ -88,9 +83,12 @@ def add_rollback(fd, job):
     fd.write("%s:%s\n" % (digest, job_str))
     os.fsync(fd.fileno())
 
-# initialize the last_successful_id to be 
-# the result of select MIN(dbid) from JobUsageRecord
 def initialize_txn(cp, opts, log):
+    '''
+    initialize the last_successful_id to be the maximum of
+    the minimum dbid of the database
+    and last_successful_id
+    '''
     info = {}
     # _add_if_exists(cp, "user", info)
     info['user'] = opts.user
@@ -119,14 +117,21 @@ def initialize_txn(cp, opts, log):
     maximum_dbid = int(row[0])
     log.debug("maximum_dbid: " + str(maximum_dbid))
     # now, we want to put it into the file
+    # we check the file, if the file is empty, then it is the
+    # the minimum dbid, otherwise, we choose 
+    # to be the maximum of the "minimum dbid" and the last_successful_id in the file
     txn={}
-    txn['last_successful_id']=minimum_dbid
+    txn_previous = start_txn(cp, opts)
+    txn['last_successful_id']=max(minimum_dbid, txn_previous['last_successful_id'])
     # txn['probename'] = cp.get("gratia", "probe")
     txn['probename'] = opts.probename
     commit_txn(cp, txn, log)
     return minimum_dbid, maximum_dbid
 
 def start_txn(cp, opts):
+    '''
+    read the content of the txn file
+    '''
     txn_file = cp.get("transaction", "last_successful_id")
     try:
         txn_fp = open(txn_file, "r")
@@ -141,6 +146,9 @@ def start_txn(cp, opts):
         return {'probename':probename, 'last_successful_id': 0}
 
 def commit_txn(cp, txn, log):
+    '''
+    update the txn file
+    '''
     txn_file = cp.get("transaction", "last_successful_id")
     txn_fp = open(txn_file, "w")
     simplejson.dump(txn, txn_fp)

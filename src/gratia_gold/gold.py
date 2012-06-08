@@ -63,7 +63,6 @@ def get_digits_from_a_string(string1):
 
 def call_gcharge(job, log):
     '''
-    Modified by Yaling Zheng
     job has the following information 
     dbid, resource_type, vo_name, user, charge, wall_duration, cpu, node_count, njobs, 
     processors, endtime, machine_name, project_name
@@ -80,13 +79,10 @@ def call_gcharge(job, log):
     [[-j] gold_job_id] [-q quote_id] [-r reservation_id] {-J job_id}
     '''
     args = ["gcharge"]
-    # force the user name to be yzheng
     if job['user']:
         args += ["-u", job['user']]
     if job['project_name']:
         args += ["-p", job['project_name']]
-    # force the project name to be OSG-Staff
-    # job['project_name'] = "OSG-Staff"
     # force the machine name to be grid1.osg.xsede
     job['machine_name'] = "grid1.osg.xsede"
     args += ["-m", job['machine_name']]
@@ -131,6 +127,9 @@ def call_gcharge(job, log):
 
 
 def refund(cp, job, log):
+    '''
+    refund a job by its job id
+    '''
     args = ["grefund"]
     args += ["-J", job["dbid"]]
     log.debug("grefund "+ str(args))
