@@ -13,7 +13,6 @@ import logging
 from datetime import datetime, timedelta
 
 log = logging.getLogger("gratia_gold.gold")
-logfile = "gratia_gold.gold"
 
 def setup_env(cp):
     gold_home = cp.get("gold", "home")
@@ -27,7 +26,6 @@ def setup_env(cp):
     os.environ['PATH'] = ";".join(paths)
     
 def drop_privs(cp):
-    global log
     gold_user = cp.get("gold", "username")
     pw_info = pwd.getpwnam(gold_user)
     try:
@@ -81,8 +79,6 @@ def call_gcharge(job):
     [--debug] [-?, --help] [--man] [--quiet] [-v, --verbose] [-V, --version]
     [[-j] gold_job_id] [-q quote_id] [-r reservation_id] {-J job_id}
     '''
-    global log
-    global logfile
     args = ["gcharge"]
     if job['user']:
         args += ["-u", job['user']]
@@ -113,29 +109,28 @@ def call_gcharge(job):
         else:
             job['charge'] = str(int(job['wall_duration'])) # job['wall_duration'] is in seconds
     args += ["-t", job['charge']]
-    log.debug("gcharge " + str(args))
-    print "gcharge" + str(args)
+
     pid = os.fork()
-    fd = open(logfile, "w")
-    #print "fd.fileno="
+    fd = open(log.name, 'w')
     fdfileno = fd.fileno()
-    #print fdfileno
     if pid == 0:
+        execvpstatus = 0
         try:
             os.dup2(fdfileno, 1)
             os.dup2(fdfileno, 2)
-            os.execvp("gcharge", args)
+            execvpstatus = os.execvp("gcharge", args)
         except:
-            log.error("job charge failed ... \n")
+            log.error("os.execvp failed; error code is "+str(execvpstatus))
             os._exit(1)
     status = 0
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
     if status == 0:
-        log.debug("job charge succeed ... \n")
+        log.debug("gcharge " + str(args)+"\nJob charge succeed ...")
     else:
-        log.debug("job charge failed ... \n")
+        log.error("gcharge " + str(args)+"\nJob charging failed; Error code is "+str(status))
+
     return status
 
 
@@ -143,28 +138,29 @@ def refund(cp, job):
     '''
     refund a job by its job id
     '''
-    global log
     args = ["grefund"]
     args += ["-J", job["dbid"]]
     log.debug("grefund "+ str(args))
     pid = os.fork()
     status = 0
-    fd = open(logfile, "w")
+    fd = open(log.name, 'w')
     fdfileno = fd.fileno()
     if pid == 0:
+        execvpstatus = 0
         try:
             os.dup2(fdfileno, 1)
             os.dup2(fdfileno, 2)
-            os.execvp("grefund", args)
+            execvpstatus = os.execvp("grefund", args)
         except:
-            log.error("job refund failed ...\n")
-            status = -1
+            log.error("os.execvp failed; erro code is " + str(execvpstatus))
+            os._exit(1)
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
     if status == 0:
-        log.debug("job refund succeed ... \n")
+        log.debug("grefund " + str(args) + "\nJob refund succeed ... ")
     else:
-        log.debug("job refund failed ...\n")
+        log.error("grefund " + str(args) + "\nJob refund failed; Error code is "+str(status))
+
     return status
 

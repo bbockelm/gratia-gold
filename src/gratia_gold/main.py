@@ -21,6 +21,7 @@ import transaction
 
 log = None
 logfile = None
+logfile_handler = None
 
 def parse_opts():
 
@@ -54,7 +55,7 @@ def config_logging(cp, opts):
     # no stream is specified, so sys.stderr will be used for logging output
     console_handler = logging.StreamHandler()
 
-    # Log to file, it is specified as /tmp/gratia-gold/gratia-gold.log
+    # Log to file, default is /var/log/gratia-gold/gratia-gold.cfg
     logfile = cp.get("logging", "file")
 
     logfile_handler = logging.FileHandler(logfile)
@@ -81,15 +82,10 @@ def config_logging(cp, opts):
 
 
 def main():
-    global log
-    global logfile
     opts, args = parse_opts()
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
     config_logging(cp, opts)
-    #log.info("opts.user=" + opts.user + " opts.passwd=" + opts.passwd  \
-    #            + " opts.host="+opts.host + " opts.port=" + str(opts.port) \
-    #           +  " opts.probe" + opts.probename)    
 
     if opts.cron > 0:
         random_sleep = random.randint(1, opts.cron)
@@ -105,9 +101,8 @@ def main():
     
     # read min_dbid and max_dbid from the gratia database and
     # also save max(min_dbid, last_successful_id) into the file last_successful_id 
-    (min_dbid, max_dbid) = transaction.initialize_txn(cp)
-    log.debug("min_dbid is "+ str(min_dbid))
-    log.debug("max_dbid is "+ str(max_dbid))
+    (min_dbid, max_dbid) = gratia.initialize_txn(cp)
+    log.debug("min_dbid is "+ str(min_dbid) + " max_dbid is "+str(max_dbid))
     curr_txn = transaction.start_txn(cp)
     curr_txt_id = curr_txn['last_successful_id'] 
     
@@ -118,12 +113,10 @@ def main():
     else:
         curr_dbid = curr_txt_id
 
-    log.debug("curr dbid is : " + str(curr_dbid))
     txn = curr_txn
     txn['last_successful_id'] = curr_dbid
     while curr_dbid <=  max_dbid:
 
-        log.debug("curr_dbid = " + str(curr_dbid))
         log.debug("Current transaction: probe=%(probename)s, DBID=%(last_successful_id)s" % txn)
 
         roll_fd = transaction.check_rollback(cp)
@@ -145,8 +138,6 @@ def main():
             if status != 0:
                 #roll_fd.close()
                 transaction.check_rollback(cp)
-                log.error("Job charging failed.")
-                # return 1
                 continue
             job_count += 1
 
