@@ -6,12 +6,14 @@ Takes a summarized Gratia job and either charges or refunds it.
 """
 
 import os
+import sys
 import pwd
 import errno
 import logging
 from datetime import datetime, timedelta
 
-#log = logging.getLogger("gratia_gold.gold")
+log = logging.getLogger("gratia_gold.gold")
+logfile = "gratia_gold.gold"
 
 def setup_env(cp):
     gold_home = cp.get("gold", "home")
@@ -25,6 +27,7 @@ def setup_env(cp):
     os.environ['PATH'] = ";".join(paths)
     
 def drop_privs(cp):
+    global log
     gold_user = cp.get("gold", "username")
     pw_info = pwd.getpwnam(gold_user)
     try:
@@ -61,7 +64,7 @@ def get_digits_from_a_string(string1):
     return numberofstring1
 
 
-def call_gcharge(job, log):
+def call_gcharge(job):
     '''
     job has the following information 
     dbid, resource_type, vo_name, user, charge, wall_duration, cpu, node_count, njobs, 
@@ -78,14 +81,15 @@ def call_gcharge(job, log):
     [--debug] [-?, --help] [--man] [--quiet] [-v, --verbose] [-V, --version]
     [[-j] gold_job_id] [-q quote_id] [-r reservation_id] {-J job_id}
     '''
+    global log
+    global logfile
     args = ["gcharge"]
     if job['user']:
         args += ["-u", job['user']]
     if job['project_name']:
         args += ["-p", job['project_name']]
-    # force the machine name to be grid1.osg.xsede
-    job['machine_name'] = "grid1.osg.xsede"
-    args += ["-m", job['machine_name']]
+    if job['machine_name']:
+        args += ["-m", job['machine_name']]
     
     originalnumprocessors = job['processors']
     job['processors'] = get_digits_from_a_string(originalnumprocessors)
@@ -99,23 +103,32 @@ def call_gcharge(job, log):
         today = datetime.today()
         dt = datetime(today.year, today.month, today.day, today.hour, today.minute, today.second)
         job['endtime'] = str(dt+timedelta(1,0)) # now + 24 hours
-    args += ["-e", job['endtime']]
+    args += ["-e", "\""+ job['endtime']+"\""]
     if job['dbid']:
         args += ["-J", str(job['dbid'])]
     
-    # [-t charge_duration]
-    # 'charge' is a must option
     if job['charge'] is None:
-        job['charge'] = "3600" # default 3600 seconds, which is 1 hour
+        if job['wall_duration'] is None:
+            job['charge'] = "3600" # default 3600 seconds, which is 1 hour
+        else:
+            job['charge'] = str(int(job['wall_duration'])) # job['wall_duration'] is in seconds
     args += ["-t", job['charge']]
     log.debug("gcharge " + str(args))
+    print "gcharge" + str(args)
     pid = os.fork()
-    status = 0
-    if pid==0:
+    fd = open(logfile, "w")
+    #print "fd.fileno="
+    fdfileno = fd.fileno()
+    #print fdfileno
+    if pid == 0:
         try:
+            os.dup2(fdfileno, 1)
+            os.dup2(fdfileno, 2)
             os.execvp("gcharge", args)
         except:
             log.error("job charge failed ... \n")
+            os._exit(1)
+    status = 0
     pid2 = 0
     while pid != pid2:
         pid2, status = os.wait()
@@ -126,17 +139,22 @@ def call_gcharge(job, log):
     return status
 
 
-def refund(cp, job, log):
+def refund(cp, job):
     '''
     refund a job by its job id
     '''
+    global log
     args = ["grefund"]
     args += ["-J", job["dbid"]]
     log.debug("grefund "+ str(args))
     pid = os.fork()
     status = 0
+    fd = open(logfile, "w")
+    fdfileno = fd.fileno()
     if pid == 0:
         try:
+            os.dup2(fdfileno, 1)
+            os.dup2(fdfileno, 2)
             os.execvp("grefund", args)
         except:
             log.error("job refund failed ...\n")

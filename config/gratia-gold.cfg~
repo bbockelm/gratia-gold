@@ -22,4 +22,3 @@ lockfile = /var/lock/gratia-gold.lock
 [logging]
 file=/var/log/gratia-gold/gratia-gold.log
 
-

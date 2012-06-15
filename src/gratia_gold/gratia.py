@@ -11,7 +11,7 @@ import logging
 
 import MySQLdb
 
-#log = logging.getLogger("gratia_gold.gratia")
+log = logging.getLogger("gratia_gold.gratia")
 
 MAX_ID = 100000
 
@@ -69,18 +69,13 @@ def _add_if_exists(cp, attribute, info):
     except:
         pass
 
-def query_gratia(cp, opts, log, txn):
+def query_gratia(cp, txn):
     info = {}
-    #_add_if_exists(cp, "user", info)
-    log.debug("opts.user="+opts.user + " opts.passwd="+opts.passwd + " opts.host="+opts.host + " opts.port=" + str(opts.port) + " opts.probename=" + opts.probename)
-    info['user'] = opts.user
-    #_add_if_exists(cp, "passwd", info)
-    info['passwd'] = opts.passwd
+    _add_if_exists(cp, "user", info)
+    _add_if_exists(cp, "passwd", info)
     _add_if_exists(cp, "db", info)
-    #_add_if_exists(cp, "host", info)
-    info['host'] = opts.host
-    #_add_if_exists(cp, "port", info)
-    info['port'] = opts.port
+    _add_if_exists(cp, "host", info)
+    _add_if_exists(cp, "port", info)
     if 'port' in info:
         info['port'] = int(info['port'])
     try:
@@ -88,31 +83,30 @@ def query_gratia(cp, opts, log, txn):
         log.debug("successfully connected to database ...\n")
     except Exception:
         log.debug("failed to connect to database ... \n")
-        return 0
+        return None
     curs = conn.cursor()
 
-    # probe = cp.get("gratia", "probe")
-    probe = opts.probename
-    txn['probename'] = probe
+    txn['probename'] = cp.get("gratia", "probe")
 
     results = []
-    # print GRATIA_QUERY
     curs.execute(GRATIA_QUERY, txn)
     for row in curs.fetchall():
         info = {}
-        info['dbid'] = row[0]
-        info['resource_type'] = row[1]
-        info['vo_name'] = row[2]
-        info['user'] = row[3]
-        info['charge'] = row[4]
-        info['wall_duration'] = row[5]
-        info['cpu'] = row[6] + row[7]
-        info['node_count'] = row[8]
-        info['njobs'] = row[9]
-        info['processors'] = row[10]
-        info['endtime'] = row[11].strftime("%Y-%m-%d %H:%M:%S")
-        info['machine_name'] = row[12]
-        info['project_name'] = row[13]
+        info['dbid'] = row[0] #dbid in gratia
+        info['resource_type'] = row[1] # ResourceType in gratia
+        info['vo_name'] = row[2] # ReportableVOName in gratia
+        info['user'] = row[3] # LocalUserId in gratia
+        info['charge'] = row[4] # Charge in gratia
+        info['wall_duration'] = row[5] # WallDuration in gratia
+        info['cpu'] = row[6] + row[7] # CpuUserDuration + CpuSystemDuration in gratia
+        info['node_count'] = row[8] # NodeCount in gratia
+        info['njobs'] = row[9] # Njobs in gratia
+        info['processors'] = row[10] # Processors in gratia
+        info['endtime'] = row[11].strftime("%Y-%m-%d %H:%M:%S") # EndTime in gratia
+        # info['machine_name'] = row[12] # MachineName in gratia
+        # force the machine_name to be opts.machinename
+        info['machine_name'] = cp.get("gratia", "machinename")
+        info['project_name'] = row[13] # ProjectName in gratia
         results.append(info)
     return results
 

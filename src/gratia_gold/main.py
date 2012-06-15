@@ -27,23 +27,13 @@ def parse_opts():
     parser = optparse.OptionParser(conflict_handler="resolve")
     parser.add_option("-c", "--config", dest="config",
                       help="Location of the configuration file.",
-                      default="config/gratia-gold.cfg")
+                      default="/etc/gratia-gold.cfg")
     parser.add_option("-v", "--verbose", dest="verbose",
                       default=False, action="store_true",
                       help="Increase verbosity.")
     parser.add_option("-s", "--cron", dest="cron",
                       type="int", default=0,
                       help = "Called from cron; cron interval (adds a random sleep)")
-    parser.add_option("-h", "--host", dest="host",
-                      default=None, help="the host name of the database gratia")
-    parser.add_option("-u", "--user", dest="user",
-                      default=None, help="the user name")
-    parser.add_option("-p", "--passwd", dest="passwd",
-                      default=None, help="the password of the user")
-    parser.add_option("-P", "--port", dest="port",
-                      type="int", default=None, help="the port number of the database gratia")
-    parser.add_option("-n", "--probename", dest="probename",
-                      default=None, help="the probename of the query in the database gratia")
     
     opts, args = parser.parse_args()
 
@@ -73,7 +63,7 @@ def config_logging(cp, opts):
     # Logging messages which are less severe than logging.WARNING will be ignored
     log.setLevel(logging.WARNING)
     console_handler.setLevel(logging.WARNING)
-    logfile_handler.setLevel(logging.INFO)
+    logfile_handler.setLevel(logging.WARNING)
 
     if opts.verbose: 
         log.setLevel(logging.DEBUG)
@@ -97,10 +87,9 @@ def main():
     cp = ConfigParser.ConfigParser()
     cp.read(opts.config)
     config_logging(cp, opts)
-
-    log.info("opts.user=" + opts.user + " opts.passwd=" + opts.passwd  \
-                 + " opts.host="+opts.host + " opts.port=" + str(opts.port) \
-                 +  " opts.probe" + opts.probename)    
+    #log.info("opts.user=" + opts.user + " opts.passwd=" + opts.passwd  \
+    #            + " opts.host="+opts.host + " opts.port=" + str(opts.port) \
+    #           +  " opts.probe" + opts.probename)    
 
     if opts.cron > 0:
         random_sleep = random.randint(1, opts.cron)
@@ -116,10 +105,10 @@ def main():
     
     # read min_dbid and max_dbid from the gratia database and
     # also save max(min_dbid, last_successful_id) into the file last_successful_id 
-    (min_dbid, max_dbid) = transaction.initialize_txn(cp, opts, log)
+    (min_dbid, max_dbid) = transaction.initialize_txn(cp)
     log.debug("min_dbid is "+ str(min_dbid))
     log.debug("max_dbid is "+ str(max_dbid))
-    curr_txn = transaction.start_txn(cp, opts)
+    curr_txn = transaction.start_txn(cp)
     curr_txt_id = curr_txn['last_successful_id'] 
     
     curr_dbid = min_dbid
@@ -137,10 +126,10 @@ def main():
         log.debug("curr_dbid = " + str(curr_dbid))
         log.debug("Current transaction: probe=%(probename)s, DBID=%(last_successful_id)s" % txn)
 
-        roll_fd = transaction.check_rollback(cp, logfile)
+        roll_fd = transaction.check_rollback(cp)
 
-        jobs = gratia.query_gratia(cp, opts, log, txn)
-
+        jobs = gratia.query_gratia(cp, txn)
+        
         for job in jobs:
             log.debug("Processing job: %s" % str(job))
 
@@ -152,10 +141,10 @@ def main():
             # gcharge - this way, if the script is killed unexpectedly, we'll
             # refund the job.  So, this errs on the conservative side.
             transaction.add_rollback(roll_fd, job)
-            status = gold.call_gcharge(job, log)
+            status = gold.call_gcharge(job)
             if status != 0:
                 #roll_fd.close()
-                transaction.check_rollback(cp, log)
+                transaction.check_rollback(cp)
                 log.error("Job charging failed.")
                 # return 1
                 continue
@@ -169,7 +158,7 @@ def main():
             max_id = txn['last_successful_id'] + gratia.MAX_ID
 
         txn['last_successful_id'] = max_id
-        transaction.commit_txn(cp, txn, log)
+        transaction.commit_txn(cp, txn)
         curr_dbid = max_id
     return 0
 

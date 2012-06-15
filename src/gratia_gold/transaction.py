@@ -18,10 +18,11 @@ from gratia import _add_if_exists
 
 log = logging.getLogger("gratia_gold.transaction")
 
-def check_rollback(cp, log):
+def check_rollback(cp):
     """
     Read the rollback log, and rollback any pending charges.
     """
+    global log
     rollback_file = cp.get("transaction", "rollback")
     if not os.path.exists(rollback_file) or not os.access(rollback_file,
             os.R_OK):
@@ -65,7 +66,7 @@ def check_rollback(cp, log):
         job_dict = simplejson.loads(job)
         # Perform refund, then write it out.  We err on the side of issuing
         # too many refunds.
-        gold.refund(cp, job_dict, log)
+        gold.refund(cp, job_dict)
         refund_fd.write(line)
         os.fsync(refund_fd.fileno())
     rollback_fd.close()
@@ -83,52 +84,44 @@ def add_rollback(fd, job):
     fd.write("%s:%s\n" % (digest, job_str))
     os.fsync(fd.fileno())
 
-def initialize_txn(cp, opts, log):
+def initialize_txn(cp):
     '''
     initialize the last_successful_id to be the maximum of
     the minimum dbid of the database
     and last_successful_id
     '''
+    global log
     info = {}
-    # _add_if_exists(cp, "user", info)
-    info['user'] = opts.user
-    # _add_if_exists(cp, "passwd", info)
-    info['passwd'] = opts.passwd
+    _add_if_exists(cp, "user", info)
+    _add_if_exists(cp, "passwd", info)
     _add_if_exists(cp, "db", info)
-    #_add_if_exists(cp, "host", info)
-    info['host'] = opts.host
-    # _add_if_exists(cp, "port", info)
-    info['port'] = opts.port
+    _add_if_exists(cp, "host", info)
+    _add_if_exists(cp, "port", info)
     if 'port' in info:
         info['port'] = int(info['port'])
     try:
         db = MySQLdb.connect(**info)
     except Exception:
         log.debug("Connection to database failed ... \n")
-        # print "exception"
         return 0, 0
     cursor = db.cursor()
-    cursor.execute("select MIN(dbid) from JobUsageRecord");
+    cursor.execute("select MIN(dbid), MAX(dbid) from JobUsageRecord");
     row = cursor.fetchone()
     minimum_dbid = int(row[0])
-    log.debug("minimum_dbid: " + str(minimum_dbid))
-    cursor.execute("select MAX(dbid) from JobUsageRecord");
-    row = cursor.fetchone()
-    maximum_dbid = int(row[0])
-    log.debug("maximum_dbid: " + str(maximum_dbid))
+    maximum_dbid = int(row[1])
+    log.debug("minimum_dbid: " + str(minimum_dbid) + " maximum_dbid: " + str(maximum_dbid))
     # now, we want to put it into the file
     # we check the file, if the file is empty, then it is the
     # the minimum dbid, otherwise, we choose 
     # to be the maximum of the "minimum dbid" and the last_successful_id in the file
     txn={}
-    txn_previous = start_txn(cp, opts)
+    txn_previous = start_txn(cp)
     txn['last_successful_id']=max(minimum_dbid, txn_previous['last_successful_id'])
-    # txn['probename'] = cp.get("gratia", "probe")
-    txn['probename'] = opts.probename
-    commit_txn(cp, txn, log)
+    txn['probename'] = cp.get("gratia", "probe")
+    commit_txn(cp, txn)
     return minimum_dbid, maximum_dbid
 
-def start_txn(cp, opts):
+def start_txn(cp):
     '''
     read the content of the txn file
     '''
@@ -141,14 +134,14 @@ def start_txn(cp, opts):
     except IOError, ie:
         if ie.errno != 2:
             raise
-        # probename = cp.get("gratia", "probe")
-        probename = opts.probename
+        probename = cp.get("gratia", "probe")
         return {'probename':probename, 'last_successful_id': 0}
 
-def commit_txn(cp, txn, log):
+def commit_txn(cp, txn):
     '''
     update the txn file
     '''
+    global log
     txn_file = cp.get("transaction", "last_successful_id")
     txn_fp = open(txn_file, "w")
     simplejson.dump(txn, txn_fp)
