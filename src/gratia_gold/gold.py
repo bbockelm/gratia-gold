@@ -13,17 +13,20 @@ import logging
 from datetime import datetime, timedelta
 
 log = logging.getLogger("gratia_gold.gold")
+logname = None
 
 def setup_env(cp):
+    global logname
     gold_home = cp.get("gold", "home")
+    logname = cp.get("logging", "file")
     if not os.path.exists(gold_home):
         raise Exception("GOLD_HOME %s does not exist!" % gold_home)
     os.environ['GOLD_HOME'] = gold_home
-    paths = os.environ['PATH'].split(";")
+    paths = os.environ['PATH'].split(":")
     paths.append(os.path.join(gold_home, "bin"))
     paths.append(os.path.join(gold_home, "sbin"))
     # join the elements in paths by ;
-    os.environ['PATH'] = ";".join(paths)
+    os.environ['PATH'] = ":".join(paths)
     
 def drop_privs(cp):
     gold_user = cp.get("gold", "username")
@@ -111,7 +114,7 @@ def call_gcharge(job):
     args += ["-t", job['charge']]
 
     pid = os.fork()
-    fd = open(log.name, 'w')
+    fd = open(logname, 'a')
     fdfileno = fd.fileno()
     if pid == 0:
         execvpstatus = 0
@@ -143,7 +146,7 @@ def refund(cp, job):
     log.debug("grefund "+ str(args))
     pid = os.fork()
     status = 0
-    fd = open(log.name, 'w')
+    fd = open(logname, 'a')
     fdfileno = fd.fileno()
     if pid == 0:
         execvpstatus = 0
