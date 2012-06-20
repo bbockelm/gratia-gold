@@ -7,4 +7,3 @@ import gratia_gold.main
 if __name__ == '__main__':
     retval = gratia_gold.main.main()
     sys.exit(retval)
-

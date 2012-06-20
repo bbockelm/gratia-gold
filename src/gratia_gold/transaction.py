@@ -26,7 +26,7 @@ def check_rollback(cp):
         
     refund_file = "%s.refund" % rollback_file
     try:
-        refund_fd = open(refund_file, "rw")
+        refund_fd = open(refund_file, "r+")
     except IOError, ie:
         if ie.errno != 2:
             raise
@@ -79,21 +79,31 @@ def add_rollback(fd, job):
     fd.write("%s:%s\n" % (digest, job_str))
     os.fsync(fd.fileno())
 
+
 def start_txn(cp):
+    '''
+    read the content of the txn file
+    '''
     txn_file = cp.get("transaction", "last_successful_id")
     try:
         txn_fp = open(txn_file, "r")
+        txn_obj = simplejson.load(txn_fp)
+        txn_fp.close()
+        return txn_obj
     except IOError, ie:
         if ie.errno != 2:
             raise
-        return {'last_dbid': 0}
-    txn_obj = simplejson.load(txn_fp)
-    return txn_obj
+        probename = cp.get("gratia", "probe")
+        return {'probename':probename, 'last_successful_id': 0}
 
 def commit_txn(cp, txn):
+    '''
+    update the txn file
+    '''
     txn_file = cp.get("transaction", "last_successful_id")
     txn_fp = open(txn_file, "w")
     simplejson.dump(txn, txn_fp)
+    log.debug("Updating ... " + str(txn))
     os.fsync(txn_fp.fileno())
     txn_fp.close()
 
