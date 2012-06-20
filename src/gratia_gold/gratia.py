@@ -110,6 +110,7 @@ def query_gratia(cp, txn):
         # force the machine_name to be opts.machinename
         info['machine_name'] = cp.get("gratia", "machinename")
         info['project_name'] = row[13] # ProjectName in gratia
+        info['queue'] = "condor"
         results.append(info)
     return results
 

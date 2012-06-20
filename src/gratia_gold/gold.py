@@ -11,6 +11,7 @@ import pwd
 import errno
 import logging
 from datetime import datetime, timedelta
+from dateutil import parser
 
 log = logging.getLogger("gratia_gold.gold")
 logname = None
@@ -89,7 +90,9 @@ def call_gcharge(job):
         args += ["-p", job['project_name']]
     if job['machine_name']:
         args += ["-m", job['machine_name']]
-    
+    if job['queue']:
+        args += ["-C", job['queue']]
+
     originalnumprocessors = job['processors']
     job['processors'] = get_digits_from_a_string(originalnumprocessors)
     args += ["-P", job['processors']]
@@ -97,12 +100,7 @@ def call_gcharge(job):
     originalnodecount = job['node_count']
     job['node_count'] = get_digits_from_a_string(originalnodecount)
     args += ["-N", job['node_count']]
-    # if there is no endtime, force the end time to be the day after tomorrow
-    if job['endtime'] is None:
-        today = datetime.today()
-        dt = datetime(today.year, today.month, today.day, today.hour, today.minute, today.second)
-        job['endtime'] = str(dt+timedelta(1,0)) # now + 24 hours
-    args += ["-e", "\""+ job['endtime']+"\""]
+
     if job['dbid']:
         args += ["-J", str(job['dbid'])]
     
@@ -112,6 +110,24 @@ def call_gcharge(job):
         else:
             job['charge'] = str(int(job['wall_duration'])) # job['wall_duration'] is in seconds
     args += ["-t", job['charge']]
+    
+    # walltime is the same as the charge
+    args += ["-X", "WallDuration=" + str(job['charge'])] 
+
+    # if there is no endtime, force the end time to be now
+    if job['endtime'] is None:
+        today = datetime.today()
+        dt = datetime(today.year, today.month, today.day, today.hour, today.minute, today.second)
+        job['endtime'] = str(dt)
+    end_dt = parser.parse(job['endtime'])
+    args += ["-X", "EndTime=\""+ job['endtime']+"\""]
+
+    # we need a starttime for amiegold - let's just put it 24 hours before the endtime
+    start_dt = end_dt - timedelta(1,0)
+    args += ["-X", "StartTime=\""+ str(start_dt) +"\""]
+
+    # queue time is also required, but does not make much sense for summary jobs
+    args += ["-X", "QueueTime=\""+ str(start_dt) +"\""]
 
     pid = os.fork()
     fd = open(logname, 'a')

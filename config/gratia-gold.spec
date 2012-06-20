@@ -1,7 +1,7 @@
 
 Name: gratia-gold
 Summary: A converter script from a Gratia database into Gold
-Version: 0.1
+Version: 0.4
 License: ASL 2.0
 Release: 2%{?dist}
 Group: System Environment/Libraries
@@ -24,6 +24,9 @@ python setup.py build
 rm -rf $RPM_BUILD_ROOT
 
 python setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+
+chmod +x $RPM_BUILD_ROOT/usr/bin/gratia-gold
+dos2unix $RPM_BUILD_ROOT/usr/bin/gratia-gold
 
 # Ghost files for the RPM.
 mkdir -p $RPM_BUILD_ROOT/%_localstatedir/log/gratia-gold
