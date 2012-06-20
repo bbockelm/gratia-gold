@@ -1,9 +1,9 @@
 
 Name: gratia-gold
 Summary: A converter script from a Gratia database into Gold
-Version: 0.4
+Version: 0.5
 License: ASL 2.0
-Release: 2%{?dist}
+Release: 1%{?dist}
 Group: System Environment/Libraries
 
 BuildArch: noarch
@@ -24,9 +24,6 @@ python setup.py build
 rm -rf $RPM_BUILD_ROOT
 
 python setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
-
-chmod +x $RPM_BUILD_ROOT/usr/bin/gratia-gold
-dos2unix $RPM_BUILD_ROOT/usr/bin/gratia-gold
 
 # Ghost files for the RPM.
 mkdir -p $RPM_BUILD_ROOT/%_localstatedir/log/gratia-gold
@@ -54,6 +51,9 @@ exit 0
 %ghost %_localstatedir/lock/gratia-gold.lock
 
 %changelog
+* Wed Jun 20 2012 Brian Bockelman <bbockelm@cse.unl.edu> - 0.5-1
+- Finish implementation of gcharge callout.
+
 * Tue Mar 06 2012 Brian Bockelman <bbockelm@cse.unl.edu> - 0.1-2
 - Initial packaging of the gratia-gold package.
 
